@@ -148,15 +148,38 @@ Hints.dispatchAction = function(link, shift) {
     }
     break;
   case 'hover':
-    if (Hints.lastHover) {
-      DOM.mouseEvent('unhover', Hints.lastHover);
-      if (Hints.lastHover === link) {
-        Hints.lastHover = null;
+    if (Hints.hoverChain && Hints.hoverChain.length > 0) {
+      let val;
+      // already hovered -- hide deeper entries
+      if (Hints.hoverChain.indexOf(link) > -1) {
+        do {
+          val = Hints.hoverChain.pop();
+          val.parentNode.classList.remove("hover");
+          DOM.mouseEvent('unhover', val);
+        } while(val != link);
         break;
+      } // completely different menu; clear hover chain
+      else if (! Hints.hoverChain[0].parentNode.contains(link)) {
+        Hints.hoverChain.forEach(function (val) {
+          val.parentNode.classList.remove("hover");
+          DOM.mouseEvent('unhover', val);
+        });
+        Hints.hoverChain = null;
+      } // same menu, but not yet open
+      else {
+        val = Hints.hoverChain.slice(-1)[0];
+        while(! val.parentNode.contains(link)) {
+          val.parentNode.classList.remove("hover");
+          DOM.mouseEvent('unhover', val);
+          Hints.hoverChain.pop();
+          val = Hints.hoverChain.slice(-1)[0];
+        }
       }
     }
+    link.parentNode.classList.add("hover");
     DOM.mouseEvent('hover', link);
-    Hints.lastHover = link;
+    Hints.hoverChain = Hints.hoverChain || [];
+    Hints.hoverChain.push(link);
     break;
   case 'edit':
     Mappings.insertFunctions.__setElement__(link);
@@ -166,6 +189,15 @@ Hints.dispatchAction = function(link, shift) {
     });
     break;
   case 'unhover':
+    if(Hints.hoverChain && Hints.hoverChain.indexOf(link) > -1) { 
+      let val;
+      do {
+        val = Hints.hoverChain.pop();
+        val.parentNode.classList.remove("hover");
+        DOM.mouseEvent('unhover', val);
+      } while(val != link);
+    }
+    link.parentNode.classList.remove("hover");
     DOM.mouseEvent('unhover', link);
     break;
   case 'window':
